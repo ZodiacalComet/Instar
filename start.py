@@ -4,6 +4,7 @@ import asyncio
 
 from config import instar_token, category_name, seat_amount, channel_names, role_names, inverse_lst
 
+import Uno
 class GameCog(commands.Cog):
     def __init__(self, client):
         self.client = client
@@ -22,7 +23,7 @@ class GameCog(commands.Cog):
 
     @uno.command(name="start")
     async def _start(self, ctx):
-        players_lst = [ctx.author]
+        user_lst = [ctx.author]
         join_msg = "join"
 
         await ctx.send(f"**{ctx.author}** has started a game of UNO, but they need at least two players.\n"
@@ -30,23 +31,24 @@ class GameCog(commands.Cog):
 
         for _ in range(0, seat_amount):
             def join_check(m):
-                return m.content.lower() == join_msg and m.channel == ctx.channel and m.author not in players_lst
+                return m.content.lower() == join_msg and m.channel == ctx.channel #and m.author not in user_lst
 
             try:
-                r = await self.client.wait_for("message", check=join_check, timeout=30.0)
+                r = await self.client.wait_for("message", check=join_check, timeout=10.0)
             except asyncio.TimeoutError:
                 break
             else:
-                players_lst.append(r.author)
+                user_lst.append(r.author)
                 await ctx.send(f"**{r.author}** has joined the game!")
 
-        if len(players_lst) < 2:
+        if len(user_lst) < 2:
             await ctx.send("Seems like there is no one else that wants to play right now!")
             return
 
         await ctx.send("Wait while I prepare the game...")
 
         channels_lst = []
+        gui_lst = []
         roles_lst = []
 
         categories = ctx.guild.categories
@@ -55,6 +57,9 @@ class GameCog(commands.Cog):
                 channels_lst = categories[i].text_channels
                 break
 
+        for channel in channels_lst:
+            gui_lst.append( await channel.send("Placeholder") )
+
         roles = ctx.guild.roles
         for i in range(0, len(roles)):
             if roles[i].name in role_names:
@@ -62,6 +67,13 @@ class GameCog(commands.Cog):
 
         roles_lst = inverse_lst(roles_lst)
 
+        UnoGame = Uno.Game(user_lst, channels_lst, gui_lst, roles_lst)
+
+        async def update_gui(client, game_obj):
+            for player in game_obj.players:
+                await player.gui.edit(content="", embed= Uno.embed_gui(client, player) )
+
+        await update_gui(self.client, UnoGame)
 
     @_start.before_invoke
     async def prepare_server(self, ctx):
