@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import asyncio
 
-from config import instar_token, category_name, seat_amount, channel_names, role_names
+from config import instar_token, category_name, seat_amount, channel_names, role_names, inverse_lst
 
 class GameCog(commands.Cog):
     def __init__(self, client):
@@ -22,7 +22,46 @@ class GameCog(commands.Cog):
 
     @uno.command(name="start")
     async def _start(self, ctx):
-        await ctx.send("[Start sequence]")
+        players_lst = [ctx.author]
+        join_msg = "join"
+
+        await ctx.send(f"**{ctx.author}** has started a game of UNO, but they need at least two players.\n"
+                        f"If you want to join this game, say `{join_msg}`.")
+
+        for _ in range(0, seat_amount):
+            def join_check(m):
+                return m.content.lower() == join_msg and m.channel == ctx.channel and m.author not in players_lst
+
+            try:
+                r = await self.client.wait_for("message", check=join_check, timeout=30.0)
+            except asyncio.TimeoutError:
+                break
+            else:
+                players_lst.append(r.author)
+                await ctx.send(f"**{r.author}** has joined the game!")
+
+        if len(players_lst) < 2:
+            await ctx.send("Seems like there is no one else that wants to play right now!")
+            return
+
+        await ctx.send("Wait while I prepare the game...")
+
+        channels_lst = []
+        roles_lst = []
+
+        categories = ctx.guild.categories
+        for i in range(0, len(categories)):
+            if category_name == categories[i].name:
+                channels_lst = categories[i].text_channels
+                break
+
+        roles = ctx.guild.roles
+        for i in range(0, len(roles)):
+            if roles[i].name in role_names:
+                roles_lst.append(roles[i])
+
+        roles_lst = inverse_lst(roles_lst)
+
 
     @_start.before_invoke
     async def prepare_server(self, ctx):
@@ -40,8 +79,6 @@ class GameCog(commands.Cog):
                     break
             
             game_roles.append( await ctx.guild.create_role(name=role) )
-
-        await ctx.send("[Prepare server]")
 
         perms = {
             ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
