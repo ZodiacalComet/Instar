@@ -55,29 +55,30 @@ class GameCog(commands.Cog):
         gui_lst = []
         roles_lst = []
 
-        categories = ctx.guild.categories
-        for i in range(0, len(categories)):
-            if category_name == categories[i].name:
-                channels_lst = categories[i].text_channels
-                break
+        async with ctx.channel.typing():
+            categories = ctx.guild.categories
+            for i in range(0, len(categories)):
+                if category_name == categories[i].name:
+                    channels_lst = categories[i].text_channels
+                    break
 
-        for channel in channels_lst:
-            await channel.send(Uno.game_help_msg)
-            gui_lst.append( await channel.send("Placeholder") )
+            for channel in channels_lst:
+                await channel.send(Uno.game_help_msg)
+                gui_lst.append( await channel.send("Placeholder") )
 
-        roles = ctx.guild.roles
-        for i in range(0, len(roles)):
-            if roles[i].name in role_names:
-                roles_lst.append(roles[i])
+            roles = ctx.guild.roles
+            for i in range(0, len(roles)):
+                if roles[i].name in role_names:
+                    roles_lst.append(roles[i])
 
-        roles_lst = inverse_lst(roles_lst)
+            roles_lst = inverse_lst(roles_lst)
 
-        UnoGame = Uno.Game(user_lst, channels_lst, gui_lst, roles_lst)
+            UnoGame = Uno.Game(user_lst, channels_lst, gui_lst, roles_lst)
 
-        await Uno.update_gui(self.client, UnoGame)
+            await Uno.update_gui(self.client, UnoGame)
 
-        for user, role in UnoGame.player_roles():
-            await user.add_roles(role, reason="To give access to their UNO seat.")
+            for user, role in UnoGame.player_roles():
+                await user.add_roles(role, reason="To give access to their UNO seat.")
 
         cancel_game = False
 
@@ -145,6 +146,9 @@ class GameCog(commands.Cog):
 
                 await wild_instruction.delete(delay=1.0)
 
+            if UnoGame.table.top_played_card.do_reverse:
+                UnoGame.reverse()
+
             if player.do_penalize():
                 for channel in channels_lst:
                     await channel.send(f"**{player.user}** has been penalized for no calling UNO!", delete_after=5.0)
@@ -167,61 +171,78 @@ class GameCog(commands.Cog):
 
     @_start.before_invoke
     async def prepare_server(self, ctx):
-
         if category_name in [c.name for c in ctx.guild.categories]:
-            return
+                return
 
-        guild_roles = ctx.guild.roles
-        game_roles = []
+        async with ctx.channel.typing():
+            guild_roles = ctx.guild.roles
+            game_roles = []
 
-        for role in role_names:
-            for i in range(0, len(guild_roles)):
-                if role == guild_roles[i].name:
-                    await guild_roles[i].delete()
-                    break
-            
-            game_roles.append( await ctx.guild.create_role(name=role) )
+            for role in role_names:
+                for i in range(0, len(guild_roles)):
+                    if role == guild_roles[i].name:
+                        await guild_roles[i].delete()
+                        break
+                
+                game_roles.append( await ctx.guild.create_role(name=role) )
 
-        perms = {
-            ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
-            ctx.guild.me: discord.PermissionOverwrite(read_messages=True)
-        }
-        
-        game_category = await ctx.guild.create_category_channel(category_name, overwrites=perms, reason="For the game of UNO.")
-
-        for i in range(0, seat_amount):
-            channel_perms = {
+            perms = {
                 ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
-                ctx.guild.me: discord.PermissionOverwrite(read_messages=True),
-                game_roles[i]: discord.PermissionOverwrite(read_messages=True)
+                ctx.guild.me: discord.PermissionOverwrite(read_messages=True)
             }
+            
+            game_category = await ctx.guild.create_category_channel(category_name, overwrites=perms, reason="For the game of UNO.")
 
-            await game_category.create_text_channel(channel_names[i], overwrites=channel_perms)
+            for i in range(0, seat_amount):
+                channel_perms = {
+                    ctx.guild.default_role: discord.PermissionOverwrite(read_messages=False),
+                    ctx.guild.me: discord.PermissionOverwrite(read_messages=True),
+                    game_roles[i]: discord.PermissionOverwrite(read_messages=True)
+                }
+
+                await game_category.create_text_channel(channel_names[i], overwrites=channel_perms)
+
+    @_start.after_invoke
+    async def clean_up(self, ctx):
+        categories = ctx.guild.categories
+        for i in range(0, len(categories)):
+            if category_name == categories[i].name:
+                for channel in categories[i].text_channels:
+
+                    for user in channel.members:
+                        for role in user.roles:
+                            if role.name in role_names:
+                                await user.remove_roles(role, reason="Cleaning up")
+
+                    await channel.purge()
+
+                break
 
     @uno.command(name="reset")
     async def _reset(self, ctx):
-        guild_roles = ctx.guild.roles
+        async with ctx.channel.typing():
+            guild_roles = ctx.guild.roles
 
-        for role in role_names:
-            for i in range(0, len(guild_roles)):
-                if role == guild_roles[i].name:
-                    await guild_roles[i].delete(reason="Reset")
+            for role in role_names:
+                for i in range(0, len(guild_roles)):
+                    if role == guild_roles[i].name:
+                        await guild_roles[i].delete(reason="Reset")
+                        break
+
+            guild_channels = ctx.guild.text_channels
+
+            for channel in channel_names:
+                for i in range(0, len(guild_channels)):
+                    if channel == guild_channels[i].name:
+                        await guild_channels[i].delete(reason="Reset")
+                        break
+
+            guild_categories = ctx.guild.categories
+
+            for i in range(0, len(guild_categories)):
+                if category_name == guild_categories[i].name:
+                    await guild_categories[i].delete(reason="Reset")
                     break
-
-        guild_channels = ctx.guild.text_channels
-
-        for channel in channel_names:
-            for i in range(0, len(guild_channels)):
-                if channel == guild_channels[i].name:
-                    await guild_channels[i].delete(reason="Reset")
-                    break
-
-        guild_categories = ctx.guild.categories
-
-        for i in range(0, len(guild_categories)):
-            if category_name == guild_categories[i].name:
-                await guild_categories[i].delete(reason="Reset")
-                break
 
         await ctx.send("Everything UNO-related has been deleted!")
 

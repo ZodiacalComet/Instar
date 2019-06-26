@@ -73,7 +73,7 @@ class Card:
         self.type = c_type
         self.color = c_color
 
-        self.is_reverse = True if self.type == CardType.reverse else False
+        self.do_reverse = True if self.type == CardType.reverse else False
         self.is_draw_two = True if self.type == CardType.draw_two else False
         self.is_draw_four = True if self.type == CardType.draw_four else False
 
@@ -94,6 +94,7 @@ class Card:
 
     def deactivate(self):
         self.do_skip = False
+        self.do_reverse = False
 
     @property
     def play_cmd(self):
@@ -129,6 +130,22 @@ class Table:
                 self.deck.pop(i)
                 break
 
+    @property
+    def top_played_card(self):
+        return self.played_cards[0]
+
+    @property
+    def deck_size(self):
+        return len(self.deck)
+
+    def reshuffle(self):
+        for _ in range(1, len(self.played_cards) ):
+            self.deck.append( self.played_cards[1] )
+            self.played_cards.pop(1)
+
+        for _ in range(0, random.randint(4, 8) ):
+            random.shuffle(self.deck)
+
     def place_card(self, card):
         self.played_cards.insert(0, card)
 
@@ -138,14 +155,6 @@ class Table:
     def draw_play(self):
         self.place_card( self.deck[0] )
         self.deck.pop(0)
-
-    @property
-    def top_played_card(self):
-        return self.played_cards[0]
-
-    @property
-    def deck_size(self):
-        return len(self.deck)
 
 class Player:
     "UNO Player Controller"
@@ -187,6 +196,9 @@ class Player:
         for _ in range(0, amount):
             self.hand.append(self.table.deck[0])
             self.table.deck.pop(0)
+
+            if self.table.deck_size == 0:
+                self.table.reshuffle()
 
         self.called_uno = False if self.called_uno == True else False
 
@@ -252,7 +264,7 @@ class Game:
         return f" {sep} ".join(t)
 
     def reverse(self):
-        self.is_reverse = False if self.is_reverse else False
+        self.is_reverse = True if not self.is_reverse else False
 
     def next_turn(self):
         if self.is_reverse:
