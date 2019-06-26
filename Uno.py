@@ -17,6 +17,9 @@ class CardType:
     wild = "wild"
     draw_four = "draw four"
 
+draw_card_cmd = "draw card"
+uno_call_cmd = "uno"
+
 color_cards = [
     CardColor.red,
     CardColor.blue,
@@ -60,13 +63,37 @@ async def update_gui(client, game_obj):
     for player in game_obj.players:
         await player.gui.edit(content="", embed= embed_gui(client, player, game_obj) )
 
-help_msg = """[Help]"""
+game_help_msg = """[Help]"""
+
+wild_help_msg = """[Wild Help]"""
 
 class Card:
     "UNO Card Controller"
     def __init__(self, c_type, c_color, player_amt):
         self.type = c_type
         self.color = c_color
+
+        self.is_reverse = True if self.type == CardType.reverse else False
+        self.is_draw_two = True if self.type == CardType.draw_two else False
+        self.is_draw_four = True if self.type == CardType.draw_four else False
+
+        self.do_skip = True if self.type in [CardType.skip, CardType.draw_two, CardType.draw_four] else False
+
+        if self.type == CardType.reverse and player_amt == 2:
+            self.do_skip = True
+
+    @property
+    def is_wild(self):
+        return True if self.color == CardColor.black else False
+
+    def change_color(self, color):
+        if color in color_cards:
+            self.color = color
+            return True
+        return False
+
+    def deactivate(self):
+        self.do_skip = False
 
     @property
     def play_cmd(self):
@@ -130,10 +157,15 @@ class Player:
         self.table = table_ref
 
         self.hand = []
+        self.called_uno = False
 
         for _ in range(0, 7):
             self.hand.append( self.table.deck[0] )
             self.table.deck.pop(0)
+
+    @property
+    def hand_size(self):
+        return len(self.hand)
 
     @property
     def gui_hand(self):
@@ -154,10 +186,26 @@ class Player:
     def draw_card(self, amount=1):
         for _ in range(0, amount):
             self.hand.append(self.table.deck[0])
-            self.table.deck[0].pop
+            self.table.deck.pop(0)
+
+        self.called_uno = False if self.called_uno == True else False
+
+    def call_uno(self):
+        if self.hand_size == 2:
+            for card in self.hand:
+                if card.type == self.table.played_cards[0].type or card.color == self.table.played_cards[0].color or card.color == CardColor.black:
+                    self.called_uno = True
+                    return True
+        return False
+
+    def do_penalize(self):
+        if self.hand_size == 1 and self.called_uno == False:
+            self.draw_card(3)
+            return True
+        return False
 
     def play(self, cmd):
-        if cmd == "draw card":
+        if cmd == draw_card_cmd:
             if self.table.can_draw_play():
                 self.table.draw_play()
             else:
@@ -166,9 +214,10 @@ class Player:
 
         for i in range(0, len(self.hand)):
             if cmd == self.hand[i].play_cmd:
-                self.table.place_card(self.hand[i])
-                self.hand.pop(i)
-                return True
+                if self.hand[i].color == self.table.top_played_card.color or self.hand[i].type == self.table.top_played_card.type or self.hand[i].color == CardColor.black:
+                    self.table.place_card(self.hand[i])
+                    self.hand.pop(i)
+                    return True
         return False
 
 class Game:
@@ -197,10 +246,13 @@ class Game:
 
         for i in range(0, len(self.players)):
             b = "**" if i == self.current_index else ""
-            t.append(f"{b}{self.players[i].user}{b}")
+            t.append(f"{b}{self.players[i].user} ({self.players[i].hand_size}){b}")
 
         sep = "<" if self.is_reverse else ">"
         return f" {sep} ".join(t)
+
+    def reverse(self):
+        self.is_reverse = False if self.is_reverse else False
 
     def next_turn(self):
         if self.is_reverse:

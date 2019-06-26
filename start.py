@@ -33,7 +33,7 @@ class GameCog(commands.Cog):
 
         for _ in range(1, seat_amount):
             def join_check(m):
-                return m.content.lower() == join_msg and m.channel == ctx.channel #and m.author not in user_lst
+                return m.content.lower() == join_msg and m.channel == ctx.channel and m.author not in user_lst
 
             try:
                 r = await self.client.wait_for("message", check=join_check, timeout=10.0)
@@ -62,7 +62,7 @@ class GameCog(commands.Cog):
                 break
 
         for channel in channels_lst:
-            await channel.send(Uno.help_msg)
+            await channel.send(Uno.game_help_msg)
             gui_lst.append( await channel.send("Placeholder") )
 
         roles = ctx.guild.roles
@@ -78,6 +78,92 @@ class GameCog(commands.Cog):
 
         for user, role in UnoGame.player_roles():
             await user.add_roles(role, reason="To give access to their UNO seat.")
+
+        cancel_game = False
+
+        # Game Phase
+
+        while True:
+            player = UnoGame.actual_player
+            top_card = UnoGame.table.top_played_card
+            
+            def response_check(m):
+                return m.channel == player.channel and m.author == player.user
+
+            if not top_card.do_skip:
+                await player.channel.send(f"It's your turn, **{player.user}**!", delete_after=10.0)
+
+                while True:
+                    try:
+                        r = await self.client.wait_for("message", check=response_check, timeout=120.0)
+                        response = r.content.lower()
+                        await r.delete(delay=1.0)
+
+                    except asyncio.TimeoutError:
+                        cancel_game = True
+                        break
+
+                    else:
+                        if response == Uno.uno_call_cmd and player.called_uno == False:
+                            if player.call_uno():
+                                for channel in channels_lst:
+                                    await channel.send(f"**{player.user}** has called UNO!", delete_after=5.0)
+                            else:
+                                await player.channel.send("You can't call UNO right now!", delete_after=5.0)
+
+                        elif player.play(response):
+                            break
+
+                        else:
+                            await player.channel.send("Action invalid!", delete_after=5.0)
+            else:
+
+                if top_card.is_draw_two:
+                    player.draw_card(2)
+
+                if top_card.is_draw_four:
+                    player.draw_card(4)
+
+            if UnoGame.table.top_played_card.is_wild:
+                wild_instruction = await player.channel.send(Uno.wild_help_msg)
+
+                while True:
+                    try:
+                        c = await self.client.wait_for("message", check=response_check, timeout=60.0)
+                        color = c.content.lower()
+                        await c.delete(delay=1.0)
+
+                    except asyncio.TimeoutError:
+                        cancel_game = True
+                        break
+
+                    else:
+                        if UnoGame.table.top_played_card.change_color(color):
+                            break
+                        else:
+                            await player.channel.send("Action invalid!", delete_after=5.0)
+
+                await wild_instruction.delete(delay=1.0)
+
+            if player.do_penalize():
+                for channel in channels_lst:
+                    await channel.send(f"**{player.user}** has been penalized for no calling UNO!", delete_after=5.0)
+
+            if cancel_game:
+                for channel in channels_lst:
+                    await channel.send(f"Seems like **{player.user}** isn't there.\nThe game has been canceled!", delete_after=5.0)
+                break
+            
+            if player.hand_size == 0:
+                for channel in channels_lst:
+                    await channel.send(f"**{player.user}** doesn't have any cards left! **They won this game of UNO!**", delete_after=5.0)
+                await ctx.send(f"**{player.user}** has won the game of UNO!")
+                break
+
+            top_card.deactivate()
+
+            UnoGame.next_turn()
+            await Uno.update_gui(self.client, UnoGame)
 
     @_start.before_invoke
     async def prepare_server(self, ctx):
