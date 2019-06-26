@@ -7,7 +7,7 @@ class CardColor:
     blue = "b"
     green = "g"
     yellow = "y"
-    black = "b"
+    black = "black"
 
 class CardType:
     reverse = "reverse"
@@ -43,18 +43,22 @@ wild_cards = [
 for _ in range(0,2):
     wild_cards.extend(wild_cards)
 
-def embed_gui(d_client, player_obj):
+def embed_gui(d_client, player_obj, game_obj):
     embed = discord.Embed(
-        description = "Empty"
+        description = "[Turn String]"
     )
 
     embed.set_author(name="UNO GUI", icon_url=d_client.user.avatar_url)
     embed.set_thumbnail(url=player_obj.user.avatar_url)
-    embed.add_field(name="Table", value="Empty", inline=False)
+    embed.add_field(name="Table", value=f"{game_obj.table.top_played_card} - Cards left on deck: {game_obj.table.deck_size}", inline=False)
     embed.add_field(name="Your Hand", value=player_obj.gui_hand, inline=False)
     embed.set_footer(text=f"Of {player_obj.user}", icon_url=player_obj.user.avatar_url)
 
     return embed
+
+async def update_gui(client, game_obj):
+    for player in game_obj.players:
+        await player.gui.edit(content="", embed= embed_gui(client, player, game_obj) )
 
 class Card:
     "UNO Card Controller"
@@ -90,6 +94,14 @@ class Table:
                 self.deck.pop(i)
                 break
 
+    @property
+    def top_played_card(self):
+        return self.played_cards[0]
+
+    @property
+    def deck_size(self):
+        return len(self.deck)
+
 class Player:
     "UNO Player Controller"
     def __init__(self, user, gui, channel, role, table_ref):
@@ -107,7 +119,19 @@ class Player:
 
     @property
     def gui_hand(self):
-        return [ str(card) for card in self.hand ]
+        h = []
+        
+        for color in [CardColor.red, CardColor.blue, CardColor.green, CardColor.yellow, CardColor.black]:
+            l = []
+
+            for card in self.hand:
+                if card.color == color:
+                    l.append(card.type)
+
+            if len(l) > 0:
+                h.append( f"{color}: " + ", ".join(l) )
+
+        return "\n".join(h)
 
 class Game:
     "UNO Master Class"
@@ -117,3 +141,6 @@ class Game:
 
         for i in range(0, len(user_lst)):
             self.players.append( Player(user_lst[i], gui_lst[i], channel_lst[i], role_lst[i], self.table) )
+
+    def player_roles(self):
+        return [ (player.user, player.role) for player in self.players]

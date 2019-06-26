@@ -26,10 +26,12 @@ class GameCog(commands.Cog):
         user_lst = [ctx.author]
         join_msg = "join"
 
+        # Join Stage
+
         await ctx.send(f"**{ctx.author}** has started a game of UNO, but they need at least two players.\n"
                         f"If you want to join this game, say `{join_msg}`.")
 
-        for _ in range(0, seat_amount):
+        for _ in range(1, seat_amount):
             def join_check(m):
                 return m.content.lower() == join_msg and m.channel == ctx.channel #and m.author not in user_lst
 
@@ -45,6 +47,8 @@ class GameCog(commands.Cog):
             await ctx.send("Seems like there is no one else that wants to play right now!")
             return
 
+        # Preparation Stage
+
         await ctx.send("Wait while I prepare the game...")
 
         channels_lst = []
@@ -58,6 +62,7 @@ class GameCog(commands.Cog):
                 break
 
         for channel in channels_lst:
+            await channel.send("[Help]")
             gui_lst.append( await channel.send("Placeholder") )
 
         roles = ctx.guild.roles
@@ -69,11 +74,10 @@ class GameCog(commands.Cog):
 
         UnoGame = Uno.Game(user_lst, channels_lst, gui_lst, roles_lst)
 
-        async def update_gui(client, game_obj):
-            for player in game_obj.players:
-                await player.gui.edit(content="", embed= Uno.embed_gui(client, player) )
+        await Uno.update_gui(self.client, UnoGame)
 
-        await update_gui(self.client, UnoGame)
+        for user, role in UnoGame.player_roles():
+            await user.add_roles(role, reason="To give access to their UNO seat.")
 
     @_start.before_invoke
     async def prepare_server(self, ctx):
