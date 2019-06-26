@@ -62,7 +62,7 @@ class GameCog(commands.Cog):
                 break
 
         for channel in channels_lst:
-            await channel.send("[Help]")
+            await channel.send(Uno.help_msg)
             gui_lst.append( await channel.send("Placeholder") )
 
         roles = ctx.guild.roles
@@ -137,7 +137,7 @@ class GameCog(commands.Cog):
                 await guild_categories[i].delete(reason="Reset")
                 break
 
-        await ctx.send("Everything uno-related has been deleted!")
+        await ctx.send("Everything UNO-related has been deleted!")
 
 client = commands.Bot(command_prefix="i.", case_insensitive=True)
 
