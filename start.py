@@ -3,7 +3,7 @@ from discord.ext import commands
 import asyncio
 import datetime
 
-from config import instar_token, category_name, seat_amount, channel_names, role_names, format_time
+from config import instar_token, instar_info, category_name, seat_amount, channel_names, role_names, format_time
 
 import Uno
 
@@ -89,7 +89,7 @@ class GameCog(commands.Cog):
 
             for user, role in UnoGame.player_roles():
                 await user.add_roles(role, reason="To give access to their UNO seat.")
-
+            
         cancel_game = False
 
         await wait_msg.edit(content="Game ready to start!")
@@ -111,7 +111,7 @@ class GameCog(commands.Cog):
                     try:
                         r = await self.client.wait_for("message", check=response_check, timeout=120.0)
                         response = r.content.lower()
-                        await r.delete(delay=1.0)
+                        await r.delete(delay=2.0)
 
                     except asyncio.TimeoutError:
                         cancel_game = True
@@ -131,6 +131,7 @@ class GameCog(commands.Cog):
                         else:
                             await player.channel.send("Action invalid!", delete_after=5.0)
             else:
+                await player.channel.send("You lost your turn!", delete_after=5.0)
 
                 if top_card.is_draw_two:
                     player.draw_card(2)
@@ -145,7 +146,7 @@ class GameCog(commands.Cog):
                     try:
                         c = await self.client.wait_for("message", check=response_check, timeout=60.0)
                         color = c.content.lower()
-                        await c.delete(delay=1.0)
+                        await c.delete(delay=2.0)
 
                     except asyncio.TimeoutError:
                         cancel_game = True
@@ -155,12 +156,15 @@ class GameCog(commands.Cog):
                         if UnoGame.table.top_played_card.change_color(color):
                             break
                         else:
-                            await player.channel.send("Action invalid!", delete_after=5.0)
+                            await player.channel.send("That isn't a valid color!", delete_after=5.0)
 
                 await wild_instruction.delete(delay=1.0)
 
             if UnoGame.table.top_played_card.do_reverse:
                 UnoGame.reverse()
+
+                for channel in channels_lst:
+                    await channel.send(f"**{player.user}** has reversed the turns!", delete_after=5.0)
 
             if player.do_penalize():
                 for channel in channels_lst:
@@ -268,7 +272,7 @@ class GameCog(commands.Cog):
 
     @commands.command()
     async def info(self, ctx):
-        await ctx.send("[Info]")
+        await ctx.send(instar_info)
 
 client = commands.Bot(command_prefix="uno.", case_insensitive=True)
 
@@ -288,7 +292,7 @@ async def on_command_error(ctx, error):
                         + ", ".join([ f"`{perm.replace('_', ' ').title()}`" for perm in error.missing_perms ]) )
 
     elif isinstance(error, commands.MissingPermissions):
-        await ctx.send("Your are not authorized to use that!")
+        await ctx.send("You are not authorized to use that!")
 
     else:
         raise error

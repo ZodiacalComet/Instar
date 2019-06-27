@@ -6,6 +6,16 @@ with open("./token.json", "r") as f:
 
 instar_token = json_data["token"]
 
+instar_info = """Hello, I'm Instar.
+I was made with **Python 3.7.3** using the known API wrapper for Discord made by **Danny**, discord.py.
+https://github.com/Rapptz/discord.py
+
+The amateur programmer that thought he could do a game of UNO in a Discord Bot for the **Discord Hack Week #1** is the one that goes by the Discord tag of **ZodiacalComet#6636**. ~~So you now know who to search for to revolt against.~~
+
+There is also some people that took a moment of their time to test if the mess of a code worked! And for that, my coder is grateful.
+
+\t> Soon""".expandtabs(2)
+
 # Uno Config
 category_name = "UNO | Game"
 
