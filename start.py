@@ -1,8 +1,9 @@
 import discord
 from discord.ext import commands
 import asyncio
+import datetime
 
-from config import instar_token, category_name, seat_amount, channel_names, role_names, inverse_lst
+from config import instar_token, category_name, seat_amount, channel_names, role_names, format_time
 
 import Uno
 class GameCog(commands.Cog):
@@ -73,6 +74,7 @@ class GameCog(commands.Cog):
         cancel_game = False
 
         await wait_msg.edit(content="Game ready to start!")
+        game_start_time = datetime.datetime.now()
 
         # Game Phase
 
@@ -155,7 +157,9 @@ class GameCog(commands.Cog):
             if player.hand_size == 0:
                 for channel in channels_lst:
                     await channel.send(f"**{player.user}** doesn't have any cards left! **They won this game of UNO!**")
-                await ctx.send(f"**{player.user}** has won the game of UNO!")
+
+                game_time = datetime.datetime.now() - game_start_time
+                await ctx.send(f"**{player.user}** has won the game of UNO!\nGame time: **{format_time(game_time.total_seconds())}**")
                 break
 
             top_card.deactivate()
@@ -241,11 +245,15 @@ class GameCog(commands.Cog):
 
         await ctx.send("Everything UNO-related has been deleted!")
 
+    @commands.command()
+    async def info(self, ctx):
+        await ctx.send("[Info]")
+
 client = commands.Bot(command_prefix="uno.", case_insensitive=True)
 
 @client.event
 async def on_ready():
-    await client.change_presence(activity=discord.Game("uno.start | uno.reset"))
+    await client.change_presence(activity=discord.Game("uno.start | uno.reset | uno.info"))
     print("Connected and ready to play!")
 
 client.add_cog(GameCog(client))

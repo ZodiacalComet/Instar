@@ -13,12 +13,16 @@ seat_amount = 6
 channel_names = [f"uno-seat-{numb}" for numb in range(1, seat_amount + 1)]
 role_names = [f"{numb} | UNO Seat Access" for numb in range(1, seat_amount + 1)]
 
-# Utility Functions
+# Function
 
-def inverse_lst(lst):
-    out = []
+def format_time(seconds):
+    out = ""
 
-    for i in range(1, len(lst) + 1):
-        out.append(lst[-i])
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+
+    if h > 0:
+        out += f"{h}h"
+    out += f"{m}m{s}s"
 
     return out
