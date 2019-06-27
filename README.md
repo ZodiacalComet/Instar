@@ -3,8 +3,7 @@ A poor attempt at making a game of UNO in a Discord Bot using Python for the **D
 
 **Current status:** `Work In Progress`
 
-## Requirements
-
-- [Python 3.7.3](https://www.python.org)
-- [discord.py 1.2.2](https://github.com/Rapptz/discord.py)
-- Rename the `token.example.json` to `token.json` and add your bot token there.
+## Set up
+- Have [Python 3.7.3](https://www.python.org), as of now the newest version, installed on PATH and a bot account created on the [Discord Application Page](https://discordapp.com/developers/applications).
+- Pip install the `requirements.txt`.
+- Rename the `token.example.json` to `token.json` and add your own bot token as the value of the only key in that file.
