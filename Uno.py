@@ -91,14 +91,14 @@ def game_help(emoji_dict):
 
 In the case of the wild cards ({emoji_dict[CardColor.black]}) there is no need to specify `<color>`, so to play them you would use `{CardType.wild}` ({emoji_dict[CardType.wild]}) and `{CardType.draw_four}` ({emoji_dict[CardType.draw_four]}).
 
-If you wish to draw a card, use `{draw_card_cmd}`, and if you want to call uno, use `{uno_call_cmd}`."""
+If you wish to draw a card, use `{draw_card_cmd}`, and if you want to call uno, use `{uno_call_cmd}`.""".expandtabs(2)
 
 def wild_help(emoji_dict):
     return f"""You have placed a wild card ({emoji_dict[CardColor.black]}) on the table, you now have to decide which of the following colors it'll convert to.
-\t> `{CardColor.red}` ({emoji_dict[CardColor.red]})
-\t> `{CardColor.blue}` ({emoji_dict[CardColor.blue]})
-\t> `{CardColor.green}` ({emoji_dict[CardColor.green]})
-\t> `{CardColor.yellow}` ({emoji_dict[CardColor.yellow]})"""
+\t> `{CardColor.red}` for {emoji_dict[CardColor.red]}
+\t> `{CardColor.blue}` for {emoji_dict[CardColor.blue]}
+\t> `{CardColor.green}` for {emoji_dict[CardColor.green]}
+\t> `{CardColor.yellow}` for {emoji_dict[CardColor.yellow]}""".expandtabs(2)
 
 class Card:
     "UNO Card Controller"

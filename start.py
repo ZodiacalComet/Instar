@@ -6,6 +6,23 @@ import datetime
 from config import instar_token, category_name, seat_amount, channel_names, role_names, format_time
 
 import Uno
+
+class OccupiedUNOSeats(commands.CheckFailure):
+    pass
+
+def check_seats():
+    async def predictate(ctx):
+        category = discord.utils.get(ctx.guild.categories, name=category_name)
+
+        if category:
+            for channel in category.text_channels:
+                msg = await channel.history().flatten()
+
+                if len(msg) > 0:
+                    raise OccupiedUNOSeats("There is already a game on progress right now! Wait until it ends")
+        return True
+    return commands.check(predictate)
+
 class GameCog(commands.Cog):
     def __init__(self, client):
         self.client = client
@@ -15,6 +32,8 @@ class GameCog(commands.Cog):
         await ctx.send("Pong!")
 
     @commands.command()
+    @commands.bot_has_permissions(manage_channels=True, manage_emojis=True, manage_roles=True, manage_messages=True)
+    @check_seats()
     async def start(self, ctx):
         user_lst = [ctx.author]
         join_msg = "join"
@@ -213,6 +232,8 @@ class GameCog(commands.Cog):
             await channel.purge()
 
     @commands.command()
+    @commands.has_permissions(manage_channels=True, manage_emojis=True, manage_roles=True)
+    @commands.bot_has_permissions(manage_channels=True, manage_emojis=True, manage_roles=True)
     async def reset(self, ctx):
         async with ctx.channel.typing():
             for name in Uno.emojis.values():
@@ -255,6 +276,26 @@ client = commands.Bot(command_prefix="uno.", case_insensitive=True)
 async def on_ready():
     await client.change_presence(activity=discord.Game("uno.start | uno.reset | uno.info"))
     print("Connected and ready to play!")
+
+@client.event
+async def on_command_error(ctx, error):
+    if isinstance(error, OccupiedUNOSeats):
+        await ctx.send(error)
+
+    elif isinstance(error, commands.BotMissingPermissions):
+        await ctx.send("Yikes! Seems like I don't have the necessary permissions to do my work, sorry.\n"
+                        + f"I'm missing the following permission{'s' if len(error.missing_perms) > 1 else ''}: "
+                        + ", ".join([ f"`{perm.replace('_', ' ').title()}`" for perm in error.missing_perms ]) )
+
+    elif isinstance(error, commands.MissingPermissions):
+        await ctx.send("Your are not authorized to use that!")
+
+    else:
+        raise error
+
+@client.check
+async def block_dms(ctx):
+    return ctx.guild is not None
 
 client.add_cog(GameCog(client))
 client.run(instar_token)
