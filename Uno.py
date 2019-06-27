@@ -17,7 +17,7 @@ class CardType:
     wild = "wild"
     draw_four = "draw four"
 
-draw_card_cmd = "draw card"
+draw_card_cmd = "draw"
 uno_call_cmd = "uno"
 
 color_cards = [
@@ -80,10 +80,25 @@ async def update_gui(client, game_obj):
         await player.gui.edit(content="", embed= embed_gui(client, player, game_obj) )
 
 def game_help(emoji_dict):
-    return """[Help]"""
+    return f"""In order to play a card you need to send a message in the following format: `<color> <type>`.
+**<color>:** Which can only be `{CardColor.red}` ({emoji_dict[CardColor.red]}), `{CardColor.blue}` ({emoji_dict[CardColor.blue]}), `{CardColor.green}` ({emoji_dict[CardColor.green]}), `{CardColor.yellow}` ({emoji_dict[CardColor.yellow]})
+**<type>:** Just as it can be seen in your hand; `{numb_cards[5]}`, `{numb_cards[0]}`, `{numb_cards[9]}`. Where:
+\t> {emoji_dict[CardType.reverse]} is `{CardType.reverse}`
+\t> {emoji_dict[CardType.skip]} is `{CardType.skip}`
+\t> {emoji_dict[CardType.wild]} is `{CardType.wild}`
+\t> {emoji_dict[CardType.draw_two]} is `{CardType.draw_two}`
+\t> {emoji_dict[CardType.draw_four]} is `{CardType.draw_four}`
+
+In the case of the wild cards ({emoji_dict[CardColor.black]}) there is no need to specify `<color>`, so to play them you would use `{CardType.wild}` ({emoji_dict[CardType.wild]}) and `{CardType.draw_four}` ({emoji_dict[CardType.draw_four]}).
+
+If you wish to draw a card, use `{draw_card_cmd}`, and if you want to call uno, use `{uno_call_cmd}`."""
 
 def wild_help(emoji_dict):
-    return """[Wild Help]"""
+    return f"""You have placed a wild card ({emoji_dict[CardColor.black]}) on the table, you now have to decide which of the following colors it'll convert to.
+\t> `{CardColor.red}` ({emoji_dict[CardColor.red]})
+\t> `{CardColor.blue}` ({emoji_dict[CardColor.blue]})
+\t> `{CardColor.green}` ({emoji_dict[CardColor.green]})
+\t> `{CardColor.yellow}` ({emoji_dict[CardColor.yellow]})"""
 
 class Card:
     "UNO Card Controller"
@@ -224,7 +239,7 @@ class Player:
                 s.append( card.play_cmd )
 
         if len(s) == 0:
-            return f"You cannot play any of your cards, use `{draw_card_cmd}` to draw a new one."
+            return f"You cannot play any of your cards, use `{draw_card_cmd}` to get a new one."
 
         return " | ".join([ f"`{cmd}`" for cmd in s ])
 
