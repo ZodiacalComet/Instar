@@ -247,6 +247,9 @@ class Player:
         s = []
 
         for card in self.hand:
+            if len(s) > 9:
+                break
+            
             if card.color == self.table.top_played_card.color or card.type == self.table.top_played_card.type or card.color == CardColor.black:
                 s.append( card.play_cmd )
 

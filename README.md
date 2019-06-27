@@ -1,13 +1,15 @@
 # Instar
-A poor attempt at making a game of UNO in a Discord Bot using Python and [API wrapper for Discord](https://github.com/Rapptz/discord.py) made by Danny for the **Discord Hack Week #1** in the **Entertainment** category.
+A poor attempt at making a game of UNO in a Discord Bot using Python and the [API wrapper for Discord](https://github.com/Rapptz/discord.py) made by Danny that ends when a user doesn't have any cards left on their hand for the **Discord Hack Week #1** in the **Entertainment** category.
 
-Since I can't host the bot, it was made to take care of everything itself. So you can host it, make a server, invite some friends and use the `uno.start` command.
+It is made to take care of everything itself. So you can host it, create a new server, invite some friends and the bot and use the `uno.start` command.
 
 
 
 For it to work, it needs the **Manage Channels**, **Manage Emojis**, **Manage Roles** and **Manage Messages** permissions. Or you can give it **Administrator** and be done with it, your choice.
 
-**Current status:** `Work In Progress`
+Sorry in advance of any misspelling you may find.
+
+**Current status:** `In need of testing`
 
 ## Set up
 - Have [Python 3.7.3](https://www.python.org), as of now the newest version, installed on PATH and a bot account created on the [Discord Application Page](https://discordapp.com/developers/applications).
