@@ -13,16 +13,8 @@ class GameCog(commands.Cog):
     async def ping(self, ctx):
         await ctx.send("Pong!")
 
-    @commands.group(invoke_without_command=True)
-    async def uno(self, ctx):
-        await ctx.send("[Help Command]")
-
-    @uno.command(name="howto")
-    async def _howto(self, ctx):
-        await ctx.send("[Instructions]")
-
-    @uno.command(name="start")
-    async def _start(self, ctx):
+    @commands.command()
+    async def start(self, ctx):
         user_lst = [ctx.author]
         join_msg = "join"
 
@@ -51,29 +43,27 @@ class GameCog(commands.Cog):
 
         await ctx.send("Wait while I prepare the game...")
 
-        channels_lst = []
+        emoji_dict = {}
         gui_lst = []
         roles_lst = []
 
         async with ctx.channel.typing():
-            categories = ctx.guild.categories
-            for i in range(0, len(categories)):
-                if category_name == categories[i].name:
-                    channels_lst = categories[i].text_channels
-                    break
+            for key, name in Uno.emojis.items():
+                emoji = discord.utils.get(ctx.guild.emojis, name=name)
+                if emoji:
+                    emoji_dict[key] = str(emoji)
+
+            channels_lst = discord.utils.get(ctx.guild.categories, name=category_name).text_channels
 
             for channel in channels_lst:
-                await channel.send(Uno.game_help_msg)
+                await channel.send( Uno.game_help(emoji_dict) )
                 gui_lst.append( await channel.send("Placeholder") )
 
-            roles = ctx.guild.roles
-            for i in range(0, len(roles)):
-                if roles[i].name in role_names:
-                    roles_lst.append(roles[i])
+            for name in role_names:
+                role = discord.utils.get(ctx.guild.roles, name=name)
+                roles_lst.append(role)
 
-            roles_lst = inverse_lst(roles_lst)
-
-            UnoGame = Uno.Game(user_lst, channels_lst, gui_lst, roles_lst)
+            UnoGame = Uno.Game(user_lst, channels_lst, gui_lst, roles_lst, emoji_dict)
 
             await Uno.update_gui(self.client, UnoGame)
 
@@ -126,7 +116,7 @@ class GameCog(commands.Cog):
                     player.draw_card(4)
 
             if UnoGame.table.top_played_card.is_wild:
-                wild_instruction = await player.channel.send(Uno.wild_help_msg)
+                wild_instruction = await player.channel.send( Uno.wild_help(emoji_dict) )
 
                 while True:
                     try:
@@ -169,21 +159,19 @@ class GameCog(commands.Cog):
             UnoGame.next_turn()
             await Uno.update_gui(self.client, UnoGame)
 
-    @_start.before_invoke
+    @start.before_invoke
     async def prepare_server(self, ctx):
         if category_name in [c.name for c in ctx.guild.categories]:
                 return
 
         async with ctx.channel.typing():
-            guild_roles = ctx.guild.roles
+            for name in Uno.emojis.values():
+                with open(f"{name}.png", "rb") as image:
+                    await ctx.guild.create_custom_emoji(name=name, image=image.read())
+            
             game_roles = []
 
             for role in role_names:
-                for i in range(0, len(guild_roles)):
-                    if role == guild_roles[i].name:
-                        await guild_roles[i].delete()
-                        break
-                
                 game_roles.append( await ctx.guild.create_role(name=role) )
 
             perms = {
@@ -202,7 +190,7 @@ class GameCog(commands.Cog):
 
                 await game_category.create_text_channel(channel_names[i], overwrites=channel_perms)
 
-    @_start.after_invoke
+    @start.after_invoke
     async def clean_up(self, ctx):
         categories = ctx.guild.categories
         for i in range(0, len(categories)):
@@ -218,9 +206,14 @@ class GameCog(commands.Cog):
 
                 break
 
-    @uno.command(name="reset")
-    async def _reset(self, ctx):
+    @commands.command()
+    async def reset(self, ctx):
         async with ctx.channel.typing():
+            for name in Uno.emojis.values():
+                emoji = discord.utils.get(ctx.guild.emojis, name=name)
+                if emoji:
+                    await emoji.delete(reason="Reset")
+            
             guild_roles = ctx.guild.roles
 
             for role in role_names:
@@ -246,10 +239,11 @@ class GameCog(commands.Cog):
 
         await ctx.send("Everything UNO-related has been deleted!")
 
-client = commands.Bot(command_prefix="i.", case_insensitive=True)
+client = commands.Bot(command_prefix="uno.", case_insensitive=True)
 
 @client.event
 async def on_ready():
+    await client.change_presence(activity=discord.Game("uno.start | uno.reset"))
     print("Connected and ready to play!")
 
 client.add_cog(GameCog(client))

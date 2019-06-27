@@ -46,6 +46,19 @@ wild_cards = [
 for _ in range(0,2):
     wild_cards.extend(wild_cards)
 
+emojis = {
+    CardColor.red: "UNO_Red_Card",
+    CardColor.blue: "UNO_Blue_Card",
+    CardColor.green: "UNO_Green_Card",
+    CardColor.yellow: "UNO_Yellow_Card",
+    CardColor.black: "UNO_Black_Card",
+    CardType.reverse: "UNO_Reverse_Icon",
+    CardType.skip: "UNO_Skip_Icon",
+    CardType.draw_two: "UNO_Draw_Two_Icon",
+    CardType.draw_four: "UNO_Draw_Four_Icon",
+    CardType.wild: "UNO_Wild_Icon"
+}
+
 def embed_gui(d_client, player_obj, game_obj):
     embed = discord.Embed(
         description = game_obj.turn_gui
@@ -57,21 +70,27 @@ def embed_gui(d_client, player_obj, game_obj):
     embed.add_field(name="Your Hand", value=player_obj.gui_hand, inline=False)
     embed.set_footer(text=f"Of {player_obj.user}", icon_url=player_obj.user.avatar_url)
 
+    if player_obj == game_obj.actual_player:
+        embed.add_field(name="Play suggestions", value=player_obj.play_suggestions, inline=False)
+
     return embed
 
 async def update_gui(client, game_obj):
     for player in game_obj.players:
         await player.gui.edit(content="", embed= embed_gui(client, player, game_obj) )
 
-game_help_msg = """[Help]"""
+def game_help(emoji_dict):
+    return """[Help]"""
 
-wild_help_msg = """[Wild Help]"""
+def wild_help(emoji_dict):
+    return """[Wild Help]"""
 
 class Card:
     "UNO Card Controller"
-    def __init__(self, c_type, c_color, player_amt):
+    def __init__(self, c_type, c_color, player_amt, emoji_dict):
         self.type = c_type
         self.color = c_color
+        self.emoji_dict = emoji_dict
 
         self.do_reverse = True if self.type == CardType.reverse else False
         self.is_draw_two = True if self.type == CardType.draw_two else False
@@ -103,23 +122,23 @@ class Card:
         return f"{self.color} {self.type}"
 
     def __str__(self):
-        return f"{self.color} {self.type}"
+        return f"{self.emoji_dict[self.color]} {self.emoji_dict[self.type] if self.type in self.emoji_dict else self.type}"
 
 class Table:
     "UNO Table Controller"
-    def __init__(self, player_amt):
+    def __init__(self, player_amt, emoji_dict):
         self.deck = []
         self.played_cards = []
 
         for color in color_cards:
             for numb in numb_cards:
-                self.deck.append( Card(numb, color, player_amt) )
+                self.deck.append( Card(numb, color, player_amt, emoji_dict) )
 
             for special in special_cards:
-                self.deck.append( Card(special, color, player_amt) )
+                self.deck.append( Card(special, color, player_amt, emoji_dict) )
 
         for wild in wild_cards:
-            self.deck.append( Card(wild, CardColor.black, player_amt) )
+            self.deck.append( Card(wild, CardColor.black, player_amt, emoji_dict) )
 
         for _ in range(0, random.randint(4, 8) ):
             random.shuffle(self.deck)
@@ -150,20 +169,24 @@ class Table:
         self.played_cards.insert(0, card)
 
     def can_draw_play(self):
-        return self.deck[0].color == self.played_cards[0].color or self.deck[0].type == self.played_cards[0].type or self.played_cards[0].color == CardColor.black
+        return self.deck[0].color == self.top_played_card.color or self.deck[0].type == self.top_played_card.type or self.top_played_card.color == CardColor.black
 
     def draw_play(self):
         self.place_card( self.deck[0] )
         self.deck.pop(0)
 
+        if self.deck_size == 0:
+            self.reshuffle()
+
 class Player:
     "UNO Player Controller"
-    def __init__(self, user, gui, channel, role, table_ref):
+    def __init__(self, user, gui, channel, role, table_ref, emoji_dict):
         self.user = user
         self.gui = gui
         self.channel = channel
         self.role = role
         self.table = table_ref
+        self.emoji_dict = emoji_dict
 
         self.hand = []
         self.called_uno = False
@@ -185,12 +208,25 @@ class Player:
 
             for card in self.hand:
                 if card.color == color:
-                    l.append(card.type)
+                    l.append(self.emoji_dict[card.type] if card.type in self.emoji_dict else card.type)
 
             if len(l) > 0:
-                h.append( f"{color}: " + ", ".join(l) )
+                h.append( f"{self.emoji_dict[color]}: " + ", ".join(l) )
 
         return "\n".join(h)
+
+    @property
+    def play_suggestions(self):
+        s = []
+
+        for card in self.hand:
+            if card.color == self.table.top_played_card.color or card.type == self.table.top_played_card.type or card.color == CardColor.black:
+                s.append( card.play_cmd )
+
+        if len(s) == 0:
+            return f"You cannot play any of your cards, use `{draw_card_cmd}` to draw a new one."
+
+        return " | ".join([ f"`{cmd}`" for cmd in s ])
 
     def draw_card(self, amount=1):
         for _ in range(0, amount):
@@ -205,7 +241,7 @@ class Player:
     def call_uno(self):
         if self.hand_size == 2:
             for card in self.hand:
-                if card.type == self.table.played_cards[0].type or card.color == self.table.played_cards[0].color or card.color == CardColor.black:
+                if card.type == self.table.top_played_card.type or card.color == self.table.top_played_card.color or card.color == CardColor.black:
                     self.called_uno = True
                     return True
         return False
@@ -234,16 +270,16 @@ class Player:
 
 class Game:
     "UNO Master Class"
-    def __init__(self, user_lst, channel_lst, gui_lst, role_lst):
+    def __init__(self, user_lst, channel_lst, gui_lst, role_lst, emoji_dict):
         self.players = []
-        self.table = Table(len(user_lst))
+        self.table = Table(len(user_lst), emoji_dict)
 
         self.current_index = 0
         self.max_index = len(user_lst) - 1
         self.is_reverse = False
 
         for i in range(0, len(user_lst)):
-            self.players.append( Player(user_lst[i], gui_lst[i], channel_lst[i], role_lst[i], self.table) )
+            self.players.append( Player(user_lst[i], gui_lst[i], channel_lst[i], role_lst[i], self.table, emoji_dict) )
 
     def player_roles(self):
         return [ (player.user, player.role) for player in self.players]
