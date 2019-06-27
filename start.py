@@ -41,7 +41,7 @@ class GameCog(commands.Cog):
 
         # Preparation Stage
 
-        await ctx.send("Wait while I prepare the game...")
+        wait_msg = await ctx.send("Wait while I prepare the game...")
 
         emoji_dict = {}
         gui_lst = []
@@ -57,7 +57,7 @@ class GameCog(commands.Cog):
 
             for channel in channels_lst:
                 await channel.send( Uno.game_help(emoji_dict) )
-                gui_lst.append( await channel.send("Placeholder") )
+                gui_lst.append( await channel.send("[Placeholder]") )
 
             for name in role_names:
                 role = discord.utils.get(ctx.guild.roles, name=name)
@@ -71,6 +71,8 @@ class GameCog(commands.Cog):
                 await user.add_roles(role, reason="To give access to their UNO seat.")
 
         cancel_game = False
+
+        await wait_msg.edit(content="Game ready to start!")
 
         # Game Phase
 
@@ -145,12 +147,14 @@ class GameCog(commands.Cog):
 
             if cancel_game:
                 for channel in channels_lst:
-                    await channel.send(f"Seems like **{player.user}** isn't there.\nThe game has been canceled!", delete_after=5.0)
+                    await channel.send(f"Seems like **{player.user}** isn't there.\nThe game has been cancelled!")
+
+                await ctx.send("The game has been cancelled!")
                 break
             
             if player.hand_size == 0:
                 for channel in channels_lst:
-                    await channel.send(f"**{player.user}** doesn't have any cards left! **They won this game of UNO!**", delete_after=5.0)
+                    await channel.send(f"**{player.user}** doesn't have any cards left! **They won this game of UNO!**")
                 await ctx.send(f"**{player.user}** has won the game of UNO!")
                 break
 
@@ -192,19 +196,17 @@ class GameCog(commands.Cog):
 
     @start.after_invoke
     async def clean_up(self, ctx):
-        categories = ctx.guild.categories
-        for i in range(0, len(categories)):
-            if category_name == categories[i].name:
-                for channel in categories[i].text_channels:
+        await asyncio.sleep(5)
+        
+        category = discord.utils.get(ctx.guild.categories, name=category_name)
 
-                    for user in channel.members:
-                        for role in user.roles:
-                            if role.name in role_names:
-                                await user.remove_roles(role, reason="Cleaning up")
+        for channel in category.text_channels:
+            for user in channel.members:
+                for role in user.roles:
+                    if role.name in role_names:
+                        await user.remove_roles(role, reason="Cleaning up")
 
-                    await channel.purge()
-
-                break
+            await channel.purge()
 
     @commands.command()
     async def reset(self, ctx):

@@ -105,6 +105,7 @@ class Card:
     def __init__(self, c_type, c_color, player_amt, emoji_dict):
         self.type = c_type
         self.color = c_color
+        self.player_amt = player_amt
         self.emoji_dict = emoji_dict
 
         self.do_reverse = True if self.type == CardType.reverse else False
@@ -113,7 +114,7 @@ class Card:
 
         self.do_skip = True if self.type in [CardType.skip, CardType.draw_two, CardType.draw_four] else False
 
-        if self.type == CardType.reverse and player_amt == 2:
+        if self.type == CardType.reverse and self.player_amt == 2:
             self.do_skip = True
 
     @property
@@ -129,6 +130,16 @@ class Card:
     def deactivate(self):
         self.do_skip = False
         self.do_reverse = False
+
+    def reset(self):
+        if self.type == CardType.reverse:
+            self.do_reverse = True
+        if self.type in [CardType.skip, CardType.draw_two, CardType.draw_four]:
+            self.do_skip = True
+        if self.type in [CardType.wild, CardType.draw_four]:
+            self.color = CardColor.black
+        if self.type == CardType.reverse and self.player_amt == 2:
+            self.do_skip = True
 
     @property
     def play_cmd(self):
@@ -174,6 +185,7 @@ class Table:
 
     def reshuffle(self):
         for _ in range(1, len(self.played_cards) ):
+            self.played_cards[1].reset()
             self.deck.append( self.played_cards[1] )
             self.played_cards.pop(1)
 
@@ -184,7 +196,7 @@ class Table:
         self.played_cards.insert(0, card)
 
     def can_draw_play(self):
-        return self.deck[0].color == self.top_played_card.color or self.deck[0].type == self.top_played_card.type or self.top_played_card.color == CardColor.black
+        return self.deck[0].color == self.top_played_card.color or self.deck[0].type == self.top_played_card.type or self.deck[0].color == CardColor.black
 
     def draw_play(self):
         self.place_card( self.deck[0] )
