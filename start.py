@@ -75,13 +75,11 @@ class GameCog(commands.Cog):
 
             channels_lst = discord.utils.get(ctx.guild.categories, name=category_name).text_channels
 
-            for channel in channels_lst:
-                await channel.send( Uno.game_help(emoji_dict) )
-                gui_lst.append( await channel.send("[Placeholder]") )
+            for i in range(0, len(user_lst)):
+                await channels_lst[i].send( Uno.game_help(emoji_dict) )
+                gui_lst.append( await channels_lst[i].send("[Placeholder]") )
 
-            for name in role_names:
-                role = discord.utils.get(ctx.guild.roles, name=name)
-                roles_lst.append(role)
+                roles_lst.append(discord.utils.get(ctx.guild.roles, name=role_names[i]))
 
             UnoGame = Uno.Game(user_lst, channels_lst, gui_lst, roles_lst, emoji_dict)
 
@@ -94,6 +92,11 @@ class GameCog(commands.Cog):
 
         await wait_msg.edit(content="Game ready to start!")
         game_start_time = datetime.datetime.now()
+
+        async def send_notification(msg, game_obj):
+            for player in game_obj.players:
+                if not player == game_obj.actual_player:
+                    await player.channel.send(msg, delete_after=5.0)
 
         # Game Phase
 
@@ -120,8 +123,8 @@ class GameCog(commands.Cog):
                     else:
                         if response == Uno.uno_call_cmd and player.called_uno == False:
                             if player.call_uno():
-                                for channel in channels_lst:
-                                    await channel.send(f"**{player.user}** has called UNO!", delete_after=5.0)
+                                await player.channel.send("You have called UNO!", delete_after=5.0)
+                                await send_notification(f"**{player.user}** has called UNO!", UnoGame)
                             else:
                                 await player.channel.send("You can't call UNO right now!", delete_after=5.0)
 
@@ -163,23 +166,22 @@ class GameCog(commands.Cog):
             if UnoGame.table.top_played_card.do_reverse:
                 UnoGame.reverse()
 
-                for channel in channels_lst:
-                    await channel.send(f"**{player.user}** has reversed the turns!", delete_after=5.0)
+                await player.channel.send("You have reversed the turns!", delete_after=5.0)
+                await send_notification(f"**{player.user}** has reversed the turns!", UnoGame)
 
             if player.do_penalize():
-                for channel in channels_lst:
-                    await channel.send(f"**{player.user}** has been penalized for no calling UNO!", delete_after=5.0)
+                await player.channel.send("You have been penalized for no calling UNO!", delete_after=5.0)
+                await send_notification(f"**{player.user}** has been penalized for no calling UNO!", UnoGame)
 
             if cancel_game:
-                for channel in channels_lst:
-                    await channel.send(f"Seems like **{player.user}** isn't there.\nThe game has been cancelled!")
+                await send_notification(f"Seems like **{player.user}** isn't there.\nThe game has been cancelled!", UnoGame)
 
                 await ctx.send("The game has been cancelled!")
                 break
             
             if player.hand_size == 0:
-                for channel in channels_lst:
-                    await channel.send(f"**{player.user}** doesn't have any cards left! **They won this game of UNO!**")
+                await player.channel.send("You don't have any cards left! **You won this game of UNO!**!", delete_after=5.0)
+                await send_notification(f"**{player.user}** doesn't have any cards left! **They won this game of UNO!**", UnoGame)
 
                 game_time = datetime.datetime.now() - game_start_time
                 await ctx.send(f"**{player.user}** has won the game of UNO!\nGame time: **{format_time(game_time.total_seconds())}**")
@@ -197,8 +199,11 @@ class GameCog(commands.Cog):
 
         async with ctx.channel.typing():
             for name in Uno.emojis.values():
-                with open(f"{name}.png", "rb") as image:
-                    await ctx.guild.create_custom_emoji(name=name, image=image.read())
+                try:
+                    with open(f"./{name}.png", "rb") as image:
+                        await ctx.guild.create_custom_emoji(name=name, image=image.read())
+                except FileNotFoundError:
+                    pass
             
             game_roles = []
 
@@ -225,9 +230,7 @@ class GameCog(commands.Cog):
     async def clean_up(self, ctx):
         await asyncio.sleep(5)
         
-        category = discord.utils.get(ctx.guild.categories, name=category_name)
-
-        for channel in category.text_channels:
+        for channel in discord.utils.get(ctx.guild.categories, name=category_name).text_channels:
             for user in channel.members:
                 for role in user.roles:
                     if role.name in role_names:

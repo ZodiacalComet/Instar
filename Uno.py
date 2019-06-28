@@ -81,24 +81,24 @@ async def update_gui(client, game_obj):
 
 def game_help(emoji_dict):
     return f"""In order to play a card you need to send a message in the following format: `<color> <type>`.
-**<color>:** Which can only be `{CardColor.red}` ({emoji_dict[CardColor.red]}), `{CardColor.blue}` ({emoji_dict[CardColor.blue]}), `{CardColor.green}` ({emoji_dict[CardColor.green]}), `{CardColor.yellow}` ({emoji_dict[CardColor.yellow]})
+**<color>:** Which can only be `{CardColor.red}` ({emoji_dict[CardColor.red] if CardColor.red in emoji_dict else CardColor.red}), `{CardColor.blue}` ({emoji_dict[CardColor.blue] if CardColor.blue in emoji_dict else CardColor.blue}), `{CardColor.green}` ({emoji_dict[CardColor.green] if CardColor.green in emoji_dict else CardColor.green}), `{CardColor.yellow}` ({emoji_dict[CardColor.yellow] if CardColor.yellow in emoji_dict else CardColor.yellow})
 **<type>:** Just as it can be seen in your hand; `{numb_cards[5]}`, `{numb_cards[0]}`, `{numb_cards[9]}`. Where:
-\t> {emoji_dict[CardType.reverse]} is `{CardType.reverse}`
-\t> {emoji_dict[CardType.skip]} is `{CardType.skip}`
-\t> {emoji_dict[CardType.wild]} is `{CardType.wild}`
-\t> {emoji_dict[CardType.draw_two]} is `{CardType.draw_two}`
-\t> {emoji_dict[CardType.draw_four]} is `{CardType.draw_four}`
+\t> {emoji_dict[CardType.reverse] if CardType.reverse in emoji_dict else CardType.reverse} is `{CardType.reverse}`
+\t> {emoji_dict[CardType.skip] if CardType.skip in emoji_dict else CardType.skip} is `{CardType.skip}`
+\t> {emoji_dict[CardType.wild] if CardType.wild in emoji_dict else CardType.wild} is `{CardType.wild}`
+\t> {emoji_dict[CardType.draw_two] if CardType.draw_two in emoji_dict else CardType.draw_two} is `{CardType.draw_two}`
+\t> {emoji_dict[CardType.draw_four] if CardType.draw_four in emoji_dict else CardType.draw_four} is `{CardType.draw_four}`
 
-In the case of the wild cards ({emoji_dict[CardColor.black]}) there is no need to specify `<color>`, so to play them you would use `{CardType.wild}` ({emoji_dict[CardType.wild]}) and `{CardType.draw_four}` ({emoji_dict[CardType.draw_four]}).
+In the case of the wild cards ({emoji_dict[CardColor.black] if CardColor.black in emoji_dict else CardColor.black}) there is no need to specify `<color>`, so to play them you would use `{CardType.wild}` ({emoji_dict[CardType.wild] if CardType.wild in emoji_dict else CardType.wild}) and `{CardType.draw_four}` ({emoji_dict[CardType.draw_four] if CardType.draw_four in emoji_dict else CardType.draw_four}).
 
 If you wish to draw a card, use `{draw_card_cmd}`, and if you want to call uno, use `{uno_call_cmd}`.""".expandtabs(2)
 
 def wild_help(emoji_dict):
-    return f"""You have placed a wild card ({emoji_dict[CardColor.black]}) on the table, you now have to decide which of the following colors it'll convert to.
-\t> `{CardColor.red}` for {emoji_dict[CardColor.red]}
-\t> `{CardColor.blue}` for {emoji_dict[CardColor.blue]}
-\t> `{CardColor.green}` for {emoji_dict[CardColor.green]}
-\t> `{CardColor.yellow}` for {emoji_dict[CardColor.yellow]}""".expandtabs(2)
+    return f"""You have placed a wild card ({emoji_dict[CardColor.black] if CardColor.black in emoji_dict else CardColor.black}) on the table, you now have to decide which of the following colors it'll convert to.
+\t> `{CardColor.red}` for {emoji_dict[CardColor.red] if CardColor.red in emoji_dict else CardColor.red}
+\t> `{CardColor.blue}` for {emoji_dict[CardColor.blue] if CardColor.blue in emoji_dict else CardColor.blue}
+\t> `{CardColor.green}` for {emoji_dict[CardColor.green] if CardColor.green in emoji_dict else CardColor.green}
+\t> `{CardColor.yellow}` for {emoji_dict[CardColor.yellow] if CardColor.yellow in emoji_dict else CardColor.yellow}""".expandtabs(2)
 
 class Card:
     "UNO Card Controller"
@@ -148,7 +148,7 @@ class Card:
         return f"{self.color} {self.type}"
 
     def __str__(self):
-        return f"{self.emoji_dict[self.color]} {self.emoji_dict[self.type] if self.type in self.emoji_dict else self.type}"
+        return f"{self.emoji_dict[self.color] if self.color in self.emoji_dict else self.color} {self.emoji_dict[self.type] if self.type in self.emoji_dict else self.type}"
 
 class Table:
     "UNO Table Controller"
@@ -238,7 +238,7 @@ class Player:
                     l.append(self.emoji_dict[card.type] if card.type in self.emoji_dict else card.type)
 
             if len(l) > 0:
-                h.append( f"{self.emoji_dict[color]}: " + ", ".join(l) )
+                h.append( f"{self.emoji_dict[color] if color in self.emoji_dict else color}: " + ", ".join(l) )
 
         return "\n".join(h)
 
@@ -312,7 +312,7 @@ class Game:
             self.players.append( Player(user_lst[i], gui_lst[i], channel_lst[i], role_lst[i], self.table, emoji_dict) )
 
     def player_roles(self):
-        return [ (player.user, player.role) for player in self.players]
+        return [ (player.user, player.role) for player in self.players ]
 
     @property
     def actual_player(self):
