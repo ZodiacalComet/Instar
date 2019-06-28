@@ -276,6 +276,8 @@ class GameCog(commands.Cog):
 
 client = commands.Bot(command_prefix="uno.", case_insensitive=True)
 
+client.remove_command("help")
+
 @client.event
 async def on_ready():
     await client.change_presence(activity=discord.Game("uno.start | uno.reset | uno.info"))
@@ -295,7 +297,7 @@ async def on_command_error(ctx, error):
         await ctx.send("You are not authorized to use that!")
 
     else:
-        raise error
+        print(error)
 
 @client.check
 async def block_dms(ctx):

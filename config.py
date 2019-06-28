@@ -11,10 +11,7 @@ I was made with **Python 3.7.3** using the known API wrapper for Discord made by
 https://github.com/Rapptz/discord.py
 
 The amateur programmer that thought he could do a game of UNO in a Discord Bot for the **Discord Hack Week #1** is the one that goes by the Discord tag of **ZodiacalComet#6636**. ~~So you now know who to search for to revolt against.~~
-
-There is also some people that took a moment of their time to test if the mess of a code worked! And for that, my coder is grateful.
-
-\t> Soon""".expandtabs(2)
+At least he is happy that he could rework on the game that he recently finished in a really messy way.""".expandtabs(2)
 
 # Uno Config
 category_name = "UNO | Game"

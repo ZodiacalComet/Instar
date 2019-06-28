@@ -64,7 +64,7 @@ def embed_gui(d_client, player_obj, game_obj):
         description = game_obj.turn_gui
     )
 
-    embed.set_author(name="UNO GUI", icon_url=d_client.user.avatar_url)
+    embed.set_author(name="UNO Game", icon_url=d_client.user.avatar_url)
     embed.set_thumbnail(url=player_obj.user.avatar_url)
     embed.add_field(name="Table", value=f"{game_obj.table.top_played_card} - Cards left on deck: {game_obj.table.deck_size}", inline=False)
     embed.add_field(name="Your Hand", value=player_obj.gui_hand, inline=False)
