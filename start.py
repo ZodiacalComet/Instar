@@ -48,7 +48,7 @@ class GameCog(commands.Cog):
                 return m.content.lower() == join_msg and m.channel == ctx.channel and m.author not in user_lst
 
             try:
-                r = await self.client.wait_for("message", check=join_check, timeout=10.0)
+                r = await self.client.wait_for("message", check=join_check, timeout=30.0)
             except asyncio.TimeoutError:
                 break
             else:
